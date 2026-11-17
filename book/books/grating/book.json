@@ -1,0 +1,27 @@
+{
+  "id": "grating",
+  "title": "衍射光栅及其特性",
+  "pageSize": [
+    522,
+    737
+  ],
+  "publisher": "大学物理实验",
+  "pageCount": 6,
+  "pageOffset": 0,
+  "chapters": [
+    {
+      "title": "实验四 衍射光栅及其特性",
+      "page": 1,
+      "sections": [
+        {
+          "title": "黄双线的色散",
+          "page": 2
+        },
+        {
+          "title": "测定未知波长",
+          "page": 3
+        }
+      ]
+    }
+  ]
+}
