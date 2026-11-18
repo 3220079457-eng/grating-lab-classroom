@@ -44,7 +44,7 @@ function answer(value){
 }
 function select(i){stop();lesson=i;progress=0;const u=lessons[i];
  by("number").textContent="0"+(i+1)+" / 03";by("title").textContent=u.title;by("pageName").textContent=u.ref;
- by("guide").textContent=["实验目标：用汞灯、光栅和分光计测出衍射角与波长的关系。先认清光从哪里来，又在哪里观察。","表 4-1 的左、右表示谱线位于零级的哪一侧；Ⅰ、Ⅱ是分光计上相隔约 180° 的两个游标。","教材思考：狭缝太宽与太窄时，各会出现什么现象？尝试兼顾谱线亮度与两线的可辨程度。"][i];by("pageLink").href=by("pageImage").src="book/books/grating/hi/00"+u.page+".jpg";
+ by("guide").textContent=["实验目标：用汞灯、光栅和分光计测出衍射角与波长的关系。先认清光从哪里来，又在哪里观察。","表 4-1 的左、右表示谱线位于零级的哪一侧；Ⅰ、Ⅱ是分光计上相隔约 180° 的两个游标。","教材思考：狭缝太宽与太窄时，各会出现什么现象？尝试兼顾谱线亮度与两线的可辨程度。"][i];by("pageLink").href=by("pageImage").src="reading/page-"+[208,210,209][i]+".svg";
  by("question").textContent=u.q;by("answers").replaceChildren();by("feedback").textContent=draft.attempts[i].length?"上次作答："+draft.attempts[i].at(-1).value:"";
  for(const [j,b] of [...by("lessons").children].entries())b.classList.toggle("active",i===j);
  if(u.choices){u.choices.forEach((c,j)=>{const b=document.createElement("button");b.textContent=c;b.onclick=()=>answer(j);by("answers").append(b)})}
@@ -56,5 +56,6 @@ by("play").onclick=()=>{if(timer){stop();return}if(progress>=100)progress=0;by("
 function seek(v){stop();progress=Math.min(100,Math.max(0,v));draw()}
 by("next").onclick=()=>seek((Math.floor(progress/25)+1)*25);by("back").onclick=()=>seek((Math.ceil(progress/25)-1)*25);by("timeline").oninput=e=>seek(+e.target.value);
 select(0);
+
 
 

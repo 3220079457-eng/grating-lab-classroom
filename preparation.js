@@ -9,7 +9,7 @@ const prepTabs=[...document.querySelectorAll("[data-unit]")];
 const prepPanels=[...document.querySelectorAll("[data-panel]")];
 let prepIndex=0;
 function showPrep(index,scroll=false){
-  prepIndex=index;
+  const limit=prepChecks.findIndex((_,i)=>!draft.prepChecks?.[i]?.some(a=>a.ok)); index=Math.min(index,limit<0?4:limit); prepIndex=index;
   if(index!==4)stop();
   prepPanels.forEach((panel,i)=>{panel.hidden=i!==index});
   prepTabs.forEach((tab,i)=>{if(i===index)tab.setAttribute("aria-current","step");else tab.removeAttribute("aria-current")});
@@ -30,16 +30,18 @@ function showPrep(index,scroll=false){
       button.onclick=()=>{
         draft.prepChecks??={};
         (draft.prepChecks[index]??=[]).push({value,ok:j===correct});
-        save();
+        save(); updateLocks();
         feedback.textContent=(j===correct?"正确。":"再想一想。")+reason;
       };
       by("conceptChoices").append(button);
     });
   }
-  if(scroll)document.querySelector(".prep-nav").scrollIntoView({block:"start"});
+  updateLocks(); if(scroll)document.querySelector(".prep-nav").scrollIntoView({block:"start"});
 }
+function updateLocks(){const first=prepChecks.findIndex((_,i)=>!draft.prepChecks?.[i]?.some(a=>a.ok)); prepTabs.forEach((tab,i)=>tab.disabled=first>=0&&i>first); by("nextUnit").disabled=first===prepIndex; if(by("nextUnit").disabled)by("nextUnit").textContent="答对本节自测后继续"; else if(prepIndex<4)by("nextUnit").textContent="下一节 · "+prepTabs[prepIndex+1].textContent;}
 prepTabs.forEach((button,i)=>{button.onclick=()=>showPrep(i)});
 by("previousUnit").onclick=()=>showPrep(Math.max(0,prepIndex-1),true);
 by("nextUnit").onclick=()=>{if(prepIndex===4)location.href="measurement.html";else showPrep(prepIndex+1,true)};
 showPrep(new URLSearchParams(location.search).get("unit")==="instruments"?1:0);
+
 
