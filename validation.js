@@ -25,7 +25,7 @@ const rubrics=[
  ["角色散率","固定级次对波长求导，D = k/(d cos φ)，单位 rad/nm。",["求导|微分","k/.*dcos|级次.*余弦","rad/nm|弧度每纳米|弧度/纳米"]],
  ["分辨本领","按瑞利判据，R = |k|N，受照刻线数 N = L/d。",["瑞利|瑞雷","r=.*k.*n|级次.*刻线数","l/d|宽度.*间距"]]
  ],[
- ["观察结论","同一级长波长偏转更大，左右同级角距取半；收窄入口狭缝有利于辨认黄双线。",["长波.*大|波长越长.*远","一半|取半|除以二|除以2","收窄|变窄|减小.*狭缝|调窄"]]
+ ["观察结论","同一级长波长偏转更大，左右同级角距取半；收窄入口狭缝有利于辨认黄双线。",["(?:长波长|波长(?:越|愈)长|波长较长)[^。；;]{0,28}(?:(?:角|偏转)[^。；;]{0,6}(?:越大|愈大|更大|较大)|(?:越远|愈远|更远|较远))","一半|取半|除以二|除以2","收窄|变窄|减小.*狭缝|调窄"],["同一级中波长越长，衍射角越大","左右同级角距取半","适当收窄入口狭缝可帮助分辨黄双线"]]
  ],[
  ["测量与处理说明","同一游标左右角差取半，再对两个游标求平均；由光栅方程求光栅常数。",["同一游标|同游标|分别","一半|取半|除以2|除以二","平均","光栅方程|正弦|sin"]]
  ]];
@@ -43,7 +43,13 @@ async function gradeWriting(entries,answers){
    return {...r,method:"AI 语义校验"};
  }
  let hits=0,total=0;const notes=[];
- entries.forEach(([label,ref,concepts],i)=>{const input=normalizeAnswer(answers[i]);const missed=concepts.filter(c=>!new RegExp(c,"i").test(input));total+=concepts.length;hits+=concepts.length-missed.length;if(missed.length)notes.push(label+"：请核对「"+missed.map(x=>x.split("|")[0].replace(/\.\*/g,"…")).join("、")+"」。")});
+ entries.forEach(([label,,concepts,hints],i)=>{
+   const input=normalizeAnswer(answers[i]);
+   const missed=concepts.flatMap((pattern,j)=>new RegExp(pattern,"i").test(input)?[]:[hints?.[j]??pattern.split("|")[0].replace(/\.\*/g,"…")]);
+   total+=concepts.length;
+   hits+=concepts.length-missed.length;
+   if(missed.length)notes.push(label+"：请核对「"+missed.join("、")+"」。");
+ });
  const unsafe=answers.some(a=>/(可以|应该|需要|应当|直接)直视(裸灯|汞灯)|汞灯(可以|应该|需要)?直接接入市电/.test(a));
  const errors=answers.some(a=>/刻线(垂直|垂直于)(分光计)?转轴|左右角差(不需|不用|不能)除以|波长越长.{0,6}偏角越小/.test(a));
  if(errors)notes.push("请检查刻线方向、左右角差处理或波长与偏角的关系。");
