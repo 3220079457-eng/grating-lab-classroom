@@ -1,16 +1,7 @@
 "use strict";
-const readMeasurements=()=>JSON.parse(localStorage.getItem("grating-measure-v1-real")||"null");
+const readMeasurements=()=>JSON.parse(localStorage.getItem(measurementKey("real"))||"null");
 function writeText(parent,tag,text){const n=document.createElement(tag);n.textContent=text;parent.append(n);return n}
-function route(){
- const shelf=!location.hash||location.hash==="#shelf"; by("shelf").hidden=!shelf; document.querySelector(".mast").hidden=shelf; const routeId=shelf?"shelf":["report","teacher"].includes(location.hash.slice(1))?location.hash.slice(1):"learn";
- for(const id of ["learn","report","teacher"])by(id).hidden=id!==routeId;
- for(const a of document.querySelectorAll("nav a")){if(a.getAttribute("href")==="#"+routeId)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")}
- if(routeId!=="learn")stop();
- const m=readMeasurements(),n=m?.raw.slice(1).filter(row=>row.every(v=>String(v).trim())).length||0;
- by("measureStatus").textContent="当前实测记录："+n+" / 8 行已填满。报告仅收录实测区的数据。";
-}
-window.addEventListener("hashchange",route);window.addEventListener("pageshow",route);route();
-for(const id of ["student","analysis"]){by(id).value=draft[id];by(id).oninput=()=>{draft[id]=by(id).value;save()}}
+for(const id of ["analysis"]){by(id).value=draft[id];by(id).oninput=()=>{draft[id]=by(id).value;save()}}
 function displayPhoto(id,url){const img=by(id+"View");img.hidden=!url;if(url)img.src=url;else img.removeAttribute("src")}
 for(const id of ["figure","material"]){
  displayPhoto(id,draft[id]);by(id).onchange=async()=>{try{const f=by(id).files[0];if(!f)return;
@@ -37,7 +28,7 @@ thoughtPrompts.forEach((prompt,i)=>{
 function currentReport(){
  const m=readMeasurements();if(!draft.student.trim()||!draft.analysis.trim())throw Error("请填写姓名或课堂代号，以及实验分析。");
  if(!m||!rows.some((_,i)=>measuredLine(m,i)))throw Error("请先在表 4-1 的课堂实测区填写至少一条谱线的四个有效读数；请复核角度格式和左右位置。");
- return {format:"grating-report-1",id:draft.id,version:draft.version+1,student:draft.student.trim(),identity:draft.identity||{},sketch:draft.sketch||"",discussion:draft.analysis,figure:draft.figure,attempts:draft.attempts,prepChecks:draft.prepChecks||{},measurement:m,reflections:draft.reflections||{},submitted:new Date().toISOString()};
+ return {format:"grating-report-1",id:draft.id,version:draft.version+1,student:draft.student.trim(),responses:draft.responses||{},identity:draft.identity||{},sketch:draft.sketch||"",discussion:draft.analysis,figure:draft.figure,attempts:draft.attempts,prepChecks:draft.prepChecks||{},measurement:m,reflections:draft.reflections||{},submitted:new Date().toISOString()};
 }
 by("submit").onclick=()=>{try{const report=currentReport();download(report,report.student+"-光栅报告-v"+report.version+".json");draft.version=report.version;save();by("submitStatus").textContent="已生成第 "+report.version+" 版作业，请通过课程约定渠道发给教师。"}catch(e){by("submitStatus").textContent=e.message}};
 function validReport(r){return r?.format==="grating-report-1"&&typeof r.id==="string"&&Number.isInteger(r.version)&&r.version>0&&typeof r.student==="string"&&typeof r.discussion==="string"&&r.measurement?.raw?.length===9&&r.measurement.raw.every(row=>Array.isArray(row)&&row.length===4&&row.every(v=>typeof v==="string"))&&Array.isArray(r.attempts)&&r.attempts.length===3&&r.attempts.every(a=>Array.isArray(a)&&a.every(x=>typeof x?.value==="string"&&typeof x.ok==="boolean"))&&(!r.figure||/^data:image\/jpeg;base64,[\w+/=]+$/.test(r.figure))}
@@ -45,7 +36,7 @@ async function loadFile(input){const f=input.files[0];if(!f||f.size>6e6)throw Er
 let incoming=null;
 by("incoming").onchange=async e=>{incoming=null;by("grading").hidden=true;try{
  const r=await loadFile(e.target);if(!validReport(r))throw Error("请选择学生导出的光栅报告。");incoming=r;by("grading").hidden=false;by("teacherMessage").textContent="已打开报告，第 "+r.version+" 版。";by("studentName").textContent=r.student;
- const panel=by("evidence");panel.replaceChildren(); renderIdentity(panel,r); renderSketch(panel,r.sketch);prepChecks.forEach(([prompt],i)=>{const a=r.prepChecks?.[i];if(Array.isArray(a)&&a.length)writeText(panel,"p",prompt+"　首次："+String(a[0]?.value||"")+"；末次"+(a.at(-1)?.ok?"正确":"需复习"))});r.attempts.forEach((a,i)=>writeText(panel,"p",lessons[i].title+"　"+(a.length?"首次："+a[0].value+"；共 "+a.length+" 次，末次"+(a.at(-1).ok?"正确":"需复习"):"尚无作答")));
+ const panel=by("evidence");panel.replaceChildren(); renderIdentity(panel,r); renderSketch(panel,r.sketch);Object.entries(r.responses||{}).forEach(([i,answers])=>{if(rubrics[i]&&Array.isArray(answers)){writeText(panel,"h3",stageNames[i]);answers.forEach(a=>writeText(panel,"p",String(a)))}});r.attempts.forEach((a,i)=>writeText(panel,"p",lessons[i].title+"　"+(a.length?"首次："+a[0].value+"；共 "+a.length+" 次，末次"+(a.at(-1).ok?"正确":"需复习"):"尚无作答")));
  writeText(panel,"h3","表 4-1 · 原始读数");writeText(panel,"p","仪器："+(r.measurement.instrument||"未填写")+"　光栅："+(r.measurement.grating||"未填写"));
  const wrap=document.createElement("div");wrap.className="scroll";panel.append(wrap);const table=document.createElement("table");wrap.append(table);const head=table.insertRow();["谱线","左Ⅰ","左Ⅱ","右Ⅰ","右Ⅱ","φⅠ / °","φⅡ / °","平均 φ / °","dᵢ / nm"].forEach(s=>writeText(head,"th",s));
  r.measurement.raw.forEach((row,i)=>{const tr=table.insertRow();writeText(tr,"th",i?Math.ceil(i/4)+" 级 · "+["蓝","绿","黄一","黄二"][(i-1)%4]:"零级");row.forEach(v=>writeText(tr,"td",v||"—"));const p=measuredLine(r.measurement,i);[p?.phiI,p?.phiII,p?.phi,p?.d].forEach((v,j)=>writeText(tr,"td",v==null?"—":v.toFixed(j===3?1:3)))});
@@ -68,10 +59,3 @@ by("importLesson").onchange=async e=>{try{const pack=await loadFile(e.target);
  if(pack.format!=="grating-lesson-1"||typeof pack.text!=="string"||!/^data:image\/jpeg;base64,[\w+/=]+$/.test(pack.image))throw Error("请选择教师导出的图文教学包。");
  draft.material=pack.image;draft.materialText=pack.text;by("materialText").value=pack.text;displayPhoto("material",pack.image);save();by("packStatus").textContent="已载入老师的教学图片和观察任务。";
  }catch(err){by("packStatus").textContent=err.message}};
-if(["#sim","#data","#review","#quiz"].includes(location.hash))location.replace("explore.html"+location.hash);
-
-
-
-
-
-

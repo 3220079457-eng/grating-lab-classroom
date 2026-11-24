@@ -5,8 +5,12 @@ const lessons = [
  {title:"跟随分光计读双游标",page:3,ref:"表 4-1 · 左右角位置",steps:["选定同一级绿线，先转向左侧。图中为示例刻度。","左侧对准叉丝后读取两个游标，分别记入左Ⅰ、左Ⅱ。","再转到右侧同级绿线，读取右Ⅰ、右Ⅱ。","对应游标求左右角差的一半，再将两次衍射角平均。"],q:"根据动画的四个示例读数，这条绿线的衍射角是多少度？",answer:10,hint:"同一游标的左右读数相差 20°，零级在两侧谱线中间。"},
  {title:"调节狭缝观察黄双线",page:5,ref:"思考题 · 狭缝宽度",steps:["观察 577.0 nm 和 579.0 nm 两条黄线。画面为局部放大示意。","入口狭缝较窄时谱线较细，通光量较小。","逐渐加宽狭缝，谱线变亮，同时线像变宽。","两条线的中心位置保持不变，但宽线像开始重叠。"],q:"黄双线很亮却难以区分。保持级次和光栅不变，先怎样调节？",choices:["适当收窄入口狭缝","继续加宽入口狭缝"],answer:0,hint:"比较两条线中心之间的距离和每条线本身的宽度。"}
 ];
-const draftKey="optics-class-draft-v1";
+const profile=JSON.parse(sessionStorage.getItem("grating-login")||"null");
+const suffix=profile?":"+profile.number:":guest";
+const draftKey="optics-class-draft-v1"+suffix;
+const measurementKey=mode=>"grating-measure-v1-"+mode+suffix;
 const draft=JSON.parse(localStorage.getItem(draftKey)||"null") || {id:crypto.randomUUID(),version:0,attempts:[[],[],[]],student:"",analysis:"",figure:"",material:""};
+if(profile){draft.student=profile.student;draft.identity={...draft.identity,number:profile.number}}
 function save(){try{localStorage.setItem(draftKey,JSON.stringify(draft));return true}catch{alert("当前浏览器空间不足，草稿暂未保存。请导出作业文件。");return false}}
 const canvas=by("scene"),ctx=canvas.getContext("2d");
 let lesson=0,progress=0,timer=null;
@@ -28,8 +32,7 @@ function draw(){
   label("望远镜视野",62,54);ctx.save();ctx.beginPath();ctx.arc(165,165,83,0,Math.PI*2);ctx.fillStyle="#081b1c";ctx.fill();ctx.clip();line(165,80,165,250,"#919f96",1);line(80,165,250,165,"#919f96",1);
   const pos=165+(t<.4?55*Math.max(0,1-t*5):45*Math.sin(shift*Math.PI));line(pos,80,pos,250,"#69ee9b",5);ctx.restore();
   label("一级绿线 · 546.1 nm",68,284,"#9bf0b3",17);
-  ["游标 Ⅰ","游标 Ⅱ"].forEach((name,i)=>{const base=30+i*180,reading=base-10+20*shift,y=106+i*108;label(name,305,y-22);for(let j=-8;j<=8;j++){const x=565+j*15-(reading-Math.round(reading))*15;line(x,y-12,x,y+(j%5===0?19:7),"#c4d2ca",2)}line(565,y+26,565,y+10,"#e5c27d",4);label(reading.toFixed(1)+"°",720,y+5,"#dbefbc",28)});
-  label(a<0?"左侧谱线":"右侧谱线",490,287,"#e0cb98");
+  drawDial(ctx,20+20*shift);
  }else{
   const width=3+37*t,amplitude=.38+.62*t;for(let x=90;x<790;x++){const strength=Math.exp(-((x-420)**2)/(2*width**2))+Math.exp(-((x-470)**2)/(2*width**2));ctx.fillStyle="rgba(255,218,89,"+Math.min(1,amplitude*strength)+")";ctx.fillRect(x,75,1,135)}
   label("577.0 nm",326,248,"#e9d28c");label("579.0 nm",472,248,"#e9d28c");label("入口狭缝　"+(t<.35?"窄":t<.7?"中等":"宽"),65,50);label("局部视野 · 定性示意",605,300);
@@ -42,9 +45,9 @@ function answer(value){
  draft.attempts[lesson].push({value:unit.choices?unit.choices[value]:String(value),ok});save();
  by("feedback").textContent=ok?"判断正确。"+unit.steps[3]:"再观察一次。"+unit.hint;
 }
-function select(i){stop();lesson=i;progress=0;const u=lessons[i];
+function select(i){resetDial();stop();lesson=i;progress=0;const u=lessons[i];
  by("number").textContent="0"+(i+1)+" / 03";by("title").textContent=u.title;by("pageName").textContent=u.ref;
- by("guide").textContent=["实验目标：用汞灯、光栅和分光计测出衍射角与波长的关系。先认清光从哪里来，又在哪里观察。","表 4-1 的左、右表示谱线位于零级的哪一侧；Ⅰ、Ⅱ是分光计上相隔约 180° 的两个游标。","教材思考：狭缝太宽与太窄时，各会出现什么现象？尝试兼顾谱线亮度与两线的可辨程度。"][i];by("pageLink").href=by("pageImage").src="reading/page-"+[208,210,209][i]+".svg";
+ by("guide").textContent=["实验目标：用汞灯、光栅和分光计测出衍射角与波长的关系。先认清光从哪里来，又在哪里观察。","表 4-1 的左、右表示谱线位于零级的哪一侧；Ⅰ、Ⅱ是分光计上相隔约 180° 的两个游标。","教材思考：狭缝太宽与太窄时，各会出现什么现象？尝试兼顾谱线亮度与两线的可辨程度。"][i];
  by("question").textContent=u.q;by("answers").replaceChildren();by("feedback").textContent=draft.attempts[i].length?"上次作答："+draft.attempts[i].at(-1).value:"";
  for(const [j,b] of [...by("lessons").children].entries())b.classList.toggle("active",i===j);
  if(u.choices){u.choices.forEach((c,j)=>{const b=document.createElement("button");b.textContent=c;b.onclick=()=>answer(j);by("answers").append(b)})}
@@ -52,8 +55,8 @@ function select(i){stop();lesson=i;progress=0;const u=lessons[i];
  draw();
 }
 lessons.forEach((u,i)=>{const b=document.createElement("button");b.textContent="0"+(i+1)+"　"+u.title;b.onclick=()=>select(i);by("lessons").append(b)});
-by("play").onclick=()=>{if(timer){stop();return}if(progress>=100)progress=0;by("play").textContent="暂停";timer=setInterval(()=>{progress=Math.min(100,progress+.5);draw();if(progress===100)stop()},90)};
-function seek(v){stop();progress=Math.min(100,Math.max(0,v));draw()}
+by("play").onclick=()=>{resetDial();if(timer){stop();return}if(progress>=100)progress=0;by("play").textContent="暂停";timer=setInterval(()=>{progress=Math.min(100,progress+.5);draw();if(progress===100)stop()},90)};
+function seek(v){resetDial();stop();progress=Math.min(100,Math.max(0,v));draw()}
 by("next").onclick=()=>seek((Math.floor(progress/25)+1)*25);by("back").onclick=()=>seek((Math.ceil(progress/25)-1)*25);by("timeline").oninput=e=>seek(+e.target.value);
 select(0);
 
