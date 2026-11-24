@@ -1,8 +1,49 @@
 (()=>{
 const el=id=>document.getElementById(id);
 let data;
+const recordFields=['instrument','grating','major','labDate','width','procedurePlan','work','note','phi','spacing','pick'];
 function key(){return measurementKey(el('mode').value)}
 function persist(){localStorage.setItem(key(),JSON.stringify(data))}
+function readForm(){
+  for(const id of recordFields)data[id]=el(id).value;
+  Array.from(el('record').querySelector('tbody').rows).forEach((row,i)=>{
+    row.querySelectorAll('input').forEach((input,j)=>{data.raw[i][j]=input.value});
+  });
+}
+function calculationIssue(){
+  const point=measuredLine(data,+data.pick);
+  if(!point)return '待核对谱线需要四个有效且左右不重合的读数。';
+  if(!data.phi||!data.spacing)return '请填写待核对行的 φ（°）和 d（nm）。';
+  if(Math.abs(+data.phi-point.phi)>0.02||Math.abs(+data.spacing-point.d)>Math.max(2,point.d*.002)){
+    return '所选谱线的 φ 或 d 未吻合。请复查待核对行、度与弧度，以及跨零角差是否取半。';
+  }
+  return '';
+}
+window.validateMeasurement=function(){
+  if(el('mode').value!=='real')return ['数据来源当前为「模拟练习」，请切换到「课堂实测」填写。'];
+  readForm();
+  const problems=[];
+  const labels={labDate:'实验日期',major:'专业',instrument:'仪器组号',grating:'光栅编号',work:'一行计算过程',note:'观察记录与分析'};
+  const missing=Object.entries(labels).filter(([id])=>!data[id].trim()).map(([,label])=>label);
+  if(missing.length)problems.push('请填写：'+missing.join('、')+'。');
+  if(!(Number(data.width)>0))problems.push('有效受照宽度 L 必须大于 0 mm。');
+  const columns=['左Ⅰ','左Ⅱ','右Ⅰ','右Ⅱ'];
+  rows.forEach(([k,name,w],i)=>{
+    const label=k?k+' 级 '+name+' '+w+' nm':'零级中央像';
+    const readings=data.raw[i].slice(0,k?4:2);
+    const empty=readings.flatMap((v,j)=>v.trim()?[]:[columns[j]]);
+    const invalid=readings.flatMap((v,j)=>v.trim()&&!Number.isFinite(parseAngle(v))?[columns[j]]:[]);
+    if(empty.length)problems.push(label+' 缺少 '+empty.join('、')+'。');
+    if(invalid.length)problems.push(label+' 的 '+invalid.join('、')+' 读数无效。');
+    if(k&&!empty.length&&!invalid.length&&!measuredLine(data,i))problems.push(label+' 的左右读数重合，请核对角位置。');
+  });
+  const issue=calculationIssue();
+  if(issue)problems.push(issue);
+  data.checked=!issue;
+  persist();
+  if(data.checked){render();el('mathFeedback').textContent='所选谱线的计算已核对。'}
+  return problems;
+};
 function invalidate(){
   document.querySelectorAll('.computed').forEach(cell=>cell.textContent='—');
   el('plot').textContent='完成一组独立计算后显示本次数据。';
@@ -35,12 +76,13 @@ function render(){
 }
 rows.slice(1).forEach(([k,n],i)=>el('pick').add(new Option(k+' 级 '+n,i+1)));
 el('check').onclick=()=>{
-  data.checked=false;persist();
-  const p=measuredLine(data,+el('pick').value);
-  if(!p){el('mathFeedback').textContent='该行需要四个有效角位置，且左右谱线不能重合。';return}
-  if(!el('phi').value||!el('spacing').value||Math.abs(+el('phi').value-p.phi)>0.02||Math.abs(+el('spacing').value-p.d)>Math.max(2,p.d*.002)){
-    el('mathFeedback').textContent='尚未吻合。检查左右是否来自同一游标、是否跨零，以及是否已将夹角除以二。';return}
-  data.checked=true;persist();render();el('mathFeedback').textContent='本行计算吻合，所有完整有效行已显示。';
+  readForm();
+  const issue=calculationIssue();
+  data.checked=!issue;
+  persist();
+  invalidate();
+  if(data.checked)render();
+  el('mathFeedback').textContent=issue||'本行计算吻合，所有完整有效行已显示。';
 };
 for(const id of ['instrument','grating','major','labDate','width','procedurePlan','work','note'])el(id).oninput=()=>{data[id]=el(id).value;persist();if(id==='width'&&el('plot').querySelector('svg'))render()};
 for(const id of ['phi','spacing','pick'])el(id).oninput=()=>{data[id]=el(id).value;data.checked=false;persist();invalidate()};

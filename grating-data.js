@@ -4,7 +4,9 @@ const rows=[[0,'中央像',0],...[1,2].flatMap(k=>lines.map(([name,w])=>[k,name,
 const radians=Math.PI/180;
 
 function parseAngle(value){
-  const text=String(value??'').trim();
+  const text=String(value??'').normalize("NFKC").trim()
+    .replace(/^(\d+)\s*[°度]\s*(\d+(?:\.\d+)?)\s*(?:['’′分])?$/,"$1 $2")
+    .replace(/[°度]$/,"").trim();
   if(!/^\d+(?:\.\d+)?(?:\s+\d+(?:\.\d+)?)?$/.test(text))return NaN;
   const [deg,min=0]=text.split(/\s+/).map(Number);
   if((text.includes(' ')&&!Number.isInteger(deg))||min>=60||deg+min/60>=360)return NaN;

@@ -62,9 +62,12 @@ by("evaluate").onclick=async()=>{
  const btn=by("evaluate"),idx=stage,token=revision;
  try{
   const answers=stage===6?thoughtPrompts.map((_,i)=>draft.reflections?.[i]||""):draft.responses[stage]||[];
-  if(!answers.length||answers.some(a=>!a.trim()))throw Error("请先逐条填写全部答案。");
+  if(!answers.length||answers.some(a=>!a.trim()))throw Error(stage===5?"请填写表格下方的「测量与处理说明」，并提交校验。":"请先逐条填写全部答案。");
   if(stage===4&&!draft.attempts.every(a=>a.at(-1)?.ok))throw Error("请在三个演示中分别完成自测并答对。");
-  if(stage===5){const m=readMeasurements();if(by("mode").value!=="real"||!m?.checked||!m.instrument?.trim()||!m.grating?.trim()||!m.major?.trim()||!m.labDate||!(+m.width>0)||!m.work?.trim()||!m.note?.trim()||m.raw[0].slice(0,2).some(a=>!Number.isFinite(parseAngle(a)))||!rows.slice(1).every((_,i)=>measuredLine(m,i+1)))throw Error("请完成课堂实测的日期、专业、仪器和光栅编号、受照宽度、零级和八行读数，独立核对一组计算并填写过程与观察分析。")}
+  if(stage===5){
+    const problems=validateMeasurement();
+    if(problems.length)throw Error(problems.join("\n"));
+  }
   if(stage===6&&!draft.analysis.trim())throw Error("请填写分析与讨论。");
   btn.disabled=true;by("verdict").textContent="正在校验…";
   const grade=await gradeWriting(stage===6?finalCriteria:rubrics[stage],answers);
