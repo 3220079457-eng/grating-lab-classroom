@@ -47,8 +47,8 @@ function route(){
  document.querySelector(".mast").hidden=!active;nav.hidden=advance.hidden=!active;
  by("logout").hidden=!profile;by("learn").hidden=by("measure").hidden=by("report").hidden=true;
  if(!active){if(studentPage()&&!by("login").open)by("login").showModal();return}
- const hash=location.hash.slice(1),requested=/^step-[1-7]$/.test(hash)?Number(hash.slice(5))-1:({learn:0,report:6,sim:4,quiz:4,data:5,review:6})[hash]??0;
- stage=Math.min(requested,unlocked());history.replaceState(null,"","#step-"+(stage+1));
+ const hash=location.hash.slice(1),requested=/^step-[1-7]$/.test(hash)?Number(hash.slice(5))-1:({learn:draft.lastStage??0,report:6,sim:4,quiz:4,data:5,review:6})[hash]??0;
+ stage=Math.min(requested,unlocked());draft.lastStage=stage;save();history.replaceState(null,"","#step-"+(stage+1));
  by("who").textContent=profile.student+" · "+profile.number;
  by("learn").hidden=stage===6;by("measure").hidden=stage!==5;by("report").hidden=stage!==6;
  const visiblePanels=[[0],[1],[],[2,3],[4],[],[]][stage];prepPanels.forEach((panel,i)=>panel.hidden=!visiblePanels.includes(i));
@@ -111,3 +111,11 @@ for(const [key,title] of [["endpoint","模型接口完整地址（HTTPS）"],["m
 settings.append(el("p","支持兼容 Chat Completions 的接口。本页仅发送本环节答案和评分标准。未配置服务时采用本地要点校验；临时设置刷新后清除。"));advance.append(settings);
 window.addEventListener("hashchange",route);window.addEventListener("pageshow",route);route();
 
+
+// Save text edits on change as well as input, including browser autofill.
+document.addEventListener("change",event=>{
+ const input=event.target;
+ if(input.matches("textarea,input:not([type=file]):not([type=password]),select")&&typeof input.oninput==="function"){
+   input.oninput(event);
+ }
+});

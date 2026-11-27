@@ -11,7 +11,14 @@ const draftKey="optics-class-draft-v1"+suffix;
 const measurementKey=mode=>"grating-measure-v1-"+mode+suffix;
 const draft=JSON.parse(localStorage.getItem(draftKey)||"null") || {id:crypto.randomUUID(),version:0,attempts:[[],[],[]],student:"",analysis:"",figure:"",material:""};
 if(profile){draft.student=profile.student;draft.identity={...draft.identity,number:profile.number}}
-function save(){try{localStorage.setItem(draftKey,JSON.stringify(draft));return true}catch{alert("当前浏览器空间不足，草稿暂未保存。请导出作业文件。");return false}}
+function showSaveStatus(ok){
+ const status=by("saveStatus");
+ if(status){status.textContent=ok?"已自动保存 · 本浏览器":"保存失败，请保留当前页面并检查浏览器存储空间";status.dataset.state=ok?"saved":"error"}
+}
+function save(){
+ try{localStorage.setItem(draftKey,JSON.stringify(draft));showSaveStatus(true);return true}
+ catch{showSaveStatus(false);return false}
+}
 const canvas=by("scene"),ctx=canvas.getContext("2d");
 let lesson=0,progress=0,timer=null;
 function line(x,y,X,Y,color,width=2){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(X,Y);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()}
@@ -51,7 +58,7 @@ function select(i){resetDial();stop();lesson=i;progress=0;const u=lessons[i];
  by("question").textContent=u.q;by("answers").replaceChildren();by("feedback").textContent=draft.attempts[i].length?"上次作答："+draft.attempts[i].at(-1).value:"";
  for(const [j,b] of [...by("lessons").children].entries())b.classList.toggle("active",i===j);
  if(u.choices){u.choices.forEach((c,j)=>{const b=document.createElement("button");b.textContent=c;b.onclick=()=>answer(j);by("answers").append(b)})}
- else{const input=document.createElement("input");input.type="number";input.placeholder="衍射角 / °";input.setAttribute("aria-label","衍射角（度）");const b=document.createElement("button");b.textContent="检查读数";b.onclick=()=>{if(input.value)answer(Number(input.value))};by("answers").append(input,b)}
+ else{const input=document.createElement("input");input.type="number";input.placeholder="衍射角 / °";input.value=draft.quizInputs?.[i]??"";input.oninput=()=>{draft.quizInputs??={};draft.quizInputs[i]=input.value;save()};input.setAttribute("aria-label","衍射角（度）");const b=document.createElement("button");b.textContent="检查读数";b.onclick=()=>{if(input.value)answer(Number(input.value))};by("answers").append(input,b)}
  draw();
 }
 lessons.forEach((u,i)=>{const b=document.createElement("button");b.textContent="0"+(i+1)+"　"+u.title;b.onclick=()=>select(i);by("lessons").append(b)});

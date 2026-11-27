@@ -3,7 +3,10 @@ const el=id=>document.getElementById(id);
 let data;
 const recordFields=['instrument','grating','major','labDate','width','procedurePlan','work','note','phi','spacing','pick'];
 function key(){return measurementKey(el('mode').value)}
-function persist(){localStorage.setItem(key(),JSON.stringify(data))}
+function persist(){
+ try{localStorage.setItem(key(),JSON.stringify(data));showSaveStatus(true)}
+ catch{showSaveStatus(false)}
+}
 function readForm(){
   for(const id of recordFields)data[id]=el(id).value;
   Array.from(el('record').querySelector('tbody').rows).forEach((row,i)=>{
@@ -86,7 +89,9 @@ el('check').onclick=()=>{
 };
 for(const id of ['instrument','grating','major','labDate','width','procedurePlan','work','note'])el(id).oninput=()=>{data[id]=el(id).value;persist();if(id==='width'&&el('plot').querySelector('svg'))render()};
 for(const id of ['phi','spacing','pick'])el(id).oninput=()=>{data[id]=el(id).value;data.checked=false;persist();invalidate()};
-el('mode').onchange=load;load();
+el('mode').value=draft.measurementMode||'real';
+el('mode').onchange=()=>{draft.measurementMode=el('mode').value;save();load()};
+load();
 
 
 
